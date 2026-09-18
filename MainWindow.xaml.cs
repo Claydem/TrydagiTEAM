@@ -6,7 +6,6 @@ namespace MindPace
 {
     public partial class MainWindow : Window
     {
-        // Таймер для зворотного відліку
         private readonly DispatcherTimer _timer = new();
         // 25 хвилин у секундах
         private int _seconds = 25 * 60;
@@ -22,7 +21,6 @@ namespace MindPace
             _timer.Tick += Timer_Tick;
         }
 
-        // Обробник кожної секунди таймера
         private void Timer_Tick(object? sender, EventArgs e)
         {
             if (_seconds > 0)
@@ -39,7 +37,6 @@ namespace MindPace
             }
         }
 
-        // Кнопка запуску відліку
         private void BtnStart_Click(object sender, RoutedEventArgs e)
         {
             if (!_isRunning)
@@ -49,7 +46,6 @@ namespace MindPace
             }
         }
 
-        // Кнопка паузи таймера
         private void BtnPause_Click(object sender, RoutedEventArgs e)
         {
             if (_isRunning)
@@ -59,7 +55,6 @@ namespace MindPace
             }
         }
 
-        // Обробник додавання проекту до списку
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(txtTitle.Text))
