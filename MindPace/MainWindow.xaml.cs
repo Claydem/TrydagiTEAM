@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Media;
 using System.Windows;
@@ -32,9 +32,11 @@ namespace MindPace
         private void LoadData()
         {
             _projects.Clear();
-            var list = StorageService.Load();
-            foreach (var item in list) _projects.Add(item);
-
+            var list = ProjectStorage.Load();
+            foreach (var item in list)
+            {
+                _projects.Add(item);
+            }
             RefreshUI();
         }
 
@@ -49,11 +51,11 @@ namespace MindPace
             if (active.Count > 0) cbFocusProjects.SelectedIndex = 0;
 
             double totalHoursToday = active.Sum(p => p.RequiredDailyHours);
-            lblTotalSchedule.Text = $"Щоб встигнути всі проекти, сьогодні треба працювати: {Project.FormatTime(totalHoursToday)}";
+            lblTotalSchedule.Text = $"Щоб встигнути всі проекти, сьогодні треба працювати: {Project.FormatHours(totalHoursToday)}";
 
             lstSchedule.ItemsSource = active.Select(p => new
             {
-                DisplayInfo = $"• {p.Title} — Дедлайн: {p.Deadline:dd.MM} | Потрібно працювати: {p.DailyTimeFormatted}"
+                DisplayInfo = $"{p.Title} — Дедлайн: {p.Deadline:dd.MM.yyyy} | Темп: {p.DailyTimeFormatted}"
             }).ToList();
         }
 
@@ -61,11 +63,10 @@ namespace MindPace
         {
             if (string.IsNullOrWhiteSpace(txtTitle.Text))
             {
-                MessageBox.Show("Введіть назву проекту!", "Увага", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!double.TryParse(txtHours.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double hours) || hours <= 0)
+            if (!double.TryParse(txtHours.Text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out double hours) || hours <= 0)
             {
                 hours = 10;
             }
@@ -80,21 +81,11 @@ namespace MindPace
             };
 
             _projects.Add(project);
-            StorageService.Save(_projects);
+            ProjectStorage.Save(_projects);
 
             txtTitle.Text = string.Empty;
             txtDesc.Text = string.Empty;
             RefreshUI();
-        }
-
-        private void BtnAddProgress_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is Project project)
-            {
-                project.HoursWorked = Math.Round(project.HoursWorked + 0.5, 2);
-                StorageService.Save(_projects);
-                RefreshUI();
-            }
         }
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
@@ -102,7 +93,7 @@ namespace MindPace
             if (sender is Button btn && btn.Tag is Project project)
             {
                 _projects.Remove(project);
-                StorageService.Save(_projects);
+                ProjectStorage.Save(_projects);
                 RefreshUI();
             }
         }
@@ -120,18 +111,18 @@ namespace MindPace
             {
                 _timer.Stop();
                 _isRunning = false;
-                btnTimerStart.Content = "▶ Старт";
+                btnTimerStart.Content = "Старт";
 
                 try { SystemSounds.Exclamation.Play(); } catch { }
 
                 if (cbFocusProjects.SelectedItem is Project proj)
                 {
                     proj.HoursWorked = Math.Round(proj.HoursWorked + 0.42, 2);
-                    StorageService.Save(_projects);
+                    ProjectStorage.Save(_projects);
                     RefreshUI();
                 }
 
-                MessageBox.Show("Сесію фокусу 25 хвилин завершено! Час відпочити ☕", "MindPace");
+                MessageBox.Show("Сесію фокусу завершено!", "MindPace");
                 _seconds = 25 * 60;
                 lblTimer.Text = "25:00";
             }
@@ -143,13 +134,13 @@ namespace MindPace
             {
                 _timer.Start();
                 _isRunning = true;
-                btnTimerStart.Content = "⏸ Пауза";
+                btnTimerStart.Content = "Пауза";
             }
             else
             {
                 _timer.Stop();
                 _isRunning = false;
-                btnTimerStart.Content = "▶ Продовжити";
+                btnTimerStart.Content = "Продовжити";
             }
         }
 
@@ -157,7 +148,7 @@ namespace MindPace
         {
             _timer.Stop();
             _isRunning = false;
-            btnTimerStart.Content = "▶ Старт";
+            btnTimerStart.Content = "Старт";
             _seconds = 25 * 60;
             lblTimer.Text = "25:00";
         }

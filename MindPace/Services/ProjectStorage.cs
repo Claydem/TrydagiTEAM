@@ -6,11 +6,14 @@ using MindPace.Models;
 
 namespace MindPace.Services
 {
-    public static class StorageService
+    public static class ProjectStorage
     {
-        private static readonly string FilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "projects.json");
+        private static readonly string FilePath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "projects.json"
+        );
 
-        private static readonly JsonSerializerOptions Options = new()
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
             PropertyNameCaseInsensitive = true
@@ -22,16 +25,16 @@ namespace MindPace.Services
             {
                 if (!File.Exists(FilePath))
                 {
-                    return GetDefaultSamples();
+                    return GetInitialSamples();
                 }
 
                 string json = File.ReadAllText(FilePath);
-                var data = JsonSerializer.Deserialize<List<Project>>(json, Options);
-                return data ?? GetDefaultSamples();
+                var items = JsonSerializer.Deserialize<List<Project>>(json, JsonOptions);
+                return items ?? GetInitialSamples();
             }
             catch
             {
-                return GetDefaultSamples();
+                return GetInitialSamples();
             }
         }
 
@@ -39,23 +42,23 @@ namespace MindPace.Services
         {
             try
             {
-                string json = JsonSerializer.Serialize(projects, Options);
+                string json = JsonSerializer.Serialize(projects, JsonOptions);
                 File.WriteAllText(FilePath, json);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Помилка запису: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Помилка збереження: {ex.Message}");
             }
         }
 
-        private static List<Project> GetDefaultSamples()
+        private static List<Project> GetInitialSamples()
         {
             return new List<Project>
             {
                 new Project
                 {
                     Title = "Курсова робота",
-                    Description = "Розробка модулів системи та оформлення звіту",
+                    Description = "Розробка архітектури та написання пояснювальної записки",
                     TotalEstimatedHours = 12,
                     HoursWorked = 2,
                     Deadline = DateTime.Today.AddDays(5)
