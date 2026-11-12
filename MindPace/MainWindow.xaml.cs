@@ -21,80 +21,140 @@ namespace MindPace
         public MainWindow()
         {
             InitializeComponent();
+
+            var ukCulture = CultureInfo.GetCultureInfo("uk-UA");
+            var rawDate = DateTime.Today.ToString("dddd, d MMMM yyyy", ukCulture);
+            lblTodayDate.Text = char.ToUpper(rawDate[0]) + rawDate[1..];
+
             dpDeadline.SelectedDate = DateTime.Today.AddDays(7);
 
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
 
-            LoadData();
+            LoadProjects();
+            RefreshAllViews();
         }
 
-        private void LoadData()
+        private void LoadProjects()
         {
             _projects.Clear();
-            var list = ProjectStorage.Load();
-            foreach (var item in list)
+            var loaded = ProjectStorage.Load();
+            foreach (var item in loaded)
             {
                 _projects.Add(item);
             }
-            RefreshUI();
         }
 
-        private void RefreshUI()
+        private void RefreshAllViews()
         {
             icProjects.ItemsSource = null;
             icProjects.ItemsSource = _projects;
 
-            var active = _projects.Where(p => !p.IsCompleted && p.RemainingHours > 0).ToList();
+            var activeProjects = _projects.Where(p => !p.IsCompleted && p.RemainingHours > 0).ToList();
+            lblProjectCount.Text = $"Всього: {_projects.Count} | Активних: {activeProjects.Count}";
+
             cbFocusProjects.ItemsSource = null;
-            cbFocusProjects.ItemsSource = active;
-            if (active.Count > 0) cbFocusProjects.SelectedIndex = 0;
+            cbFocusProjects.ItemsSource = activeProjects;
+            if (activeProjects.Count > 0) cbFocusProjects.SelectedIndex = 0;
 
-            double totalHoursToday = active.Sum(p => p.RequiredDailyHours);
-            lblTotalSchedule.Text = $"Щоб встигнути всі проекти, сьогодні треба працювати: {Project.FormatHours(totalHoursToday)}";
+            double totalTodayHours = activeProjects.Sum(p => p.RequiredDailyHours);
+            lblTotalSchedule.Text = $"Щоб встигнути всі проекти, сьогодні треба працювати: {Project.FormatHours(totalTodayHours)}";
 
-            lstSchedule.ItemsSource = active.Select(p => new
+            lstSchedule.ItemsSource = activeProjects.Select(p => new
             {
                 DisplayInfo = $"{p.Title} — Дедлайн: {p.Deadline:dd.MM.yyyy} | Темп: {p.DailyTimeFormatted}"
             }).ToList();
         }
 
-        private void BtnAdd_Click(object sender, RoutedEventArgs e)
+        private void BtnAddProject_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtTitle.Text))
+            lblProjectError.Visibility = Visibility.Collapsed;
+
+            string title = txtTitle.Text.Trim();
+            if (string.IsNullOrWhiteSpace(title))
             {
+                ShowProjectError("Будь ласка, введіть назву проекту.");
                 return;
             }
 
-            if (!double.TryParse(txtHours.Text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out double hours) || hours <= 0)
+            string hoursRaw = txtTotalHours.Text.Trim().Replace(',', '.');
+            if (!double.TryParse(hoursRaw, NumberStyles.Any, CultureInfo.InvariantCulture, out double totalHours) || totalHours <= 0)
             {
-                hours = 10;
+                ShowProjectError("Введіть коректну оцінку часу в годинах (більше 0).");
+                return;
             }
 
-            var project = new Project
+            DateTime deadline = dpDeadline.SelectedDate ?? DateTime.Today.AddDays(7);
+            if (deadline.Date < DateTime.Today)
             {
-                Title = txtTitle.Text.Trim(),
-                Description = txtDesc.Text.Trim(),
-                TotalEstimatedHours = hours,
+                ShowProjectError("Дедлайн не може бути у минулому.");
+                return;
+            }
+
+            var newProject = new Project
+            {
+                Title = title,
+                Description = txtDescription.Text.Trim(),
+                TotalEstimatedHours = totalHours,
                 HoursWorked = 0,
-                Deadline = dpDeadline.SelectedDate ?? DateTime.Today.AddDays(7)
+                Deadline = deadline,
+                CreatedAt = DateTime.Now
             };
 
-            _projects.Add(project);
+            _projects.Add(newProject);
             ProjectStorage.Save(_projects);
 
             txtTitle.Text = string.Empty;
-            txtDesc.Text = string.Empty;
-            RefreshUI();
+            txtDescription.Text = string.Empty;
+            txtTotalHours.Text = "10";
+            dpDeadline.SelectedDate = DateTime.Today.AddDays(7);
+
+            RefreshAllViews();
         }
 
-        private void BtnDelete_Click(object sender, RoutedEventArgs e)
+        private void ShowProjectError(string message)
+        {
+            lblProjectError.Text = message;
+            lblProjectError.Visibility = Visibility.Visible;
+        }
+
+        private void BtnAddProgress_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is Project project)
             {
-                _projects.Remove(project);
+                project.HoursWorked = Math.Round(project.HoursWorked + 0.5, 2);
                 ProjectStorage.Save(_projects);
-                RefreshUI();
+                RefreshAllViews();
+            }
+        }
+
+        private void BtnToggleComplete_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is Project project)
+            {
+                project.IsCompleted = !project.IsCompleted;
+                ProjectStorage.Save(_projects);
+                RefreshAllViews();
+            }
+        }
+
+        private void BtnDeleteProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is Project project)
+            {
+                var result = MessageBox.Show(
+                    $"Ви дійсно бажаєте видалити проект «{project.Title}»?",
+                    "Підтвердження видалення",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    _projects.Remove(project);
+                    ProjectStorage.Save(_projects);
+                    RefreshAllViews();
+                }
             }
         }
 
@@ -119,7 +179,7 @@ namespace MindPace
                 {
                     proj.HoursWorked = Math.Round(proj.HoursWorked + 0.42, 2);
                     ProjectStorage.Save(_projects);
-                    RefreshUI();
+                    RefreshAllViews();
                 }
 
                 MessageBox.Show("Сесію фокусу завершено!", "MindPace");
