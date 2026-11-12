@@ -1,99 +1,178 @@
 <Window x:Class="MindPace.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MindPace — Планер та Фокус"
-        Height="540" Width="840" MinHeight="480" MinWidth="700"
+        Title="MindPace — Планер, Розподіл часу та Фокус уваги"
+        Height="640" Width="940" MinHeight="520" MinWidth="780"
         WindowStartupLocation="CenterScreen"
-        FontFamily="Segoe UI" FontSize="14">
+        FontFamily="Segoe UI" FontSize="14"
+        Background="#F3F4F6">
+
+    <Window.Resources>
+        <Style x:Key="CardPanel" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="50"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#2C3E50" Padding="15,0">
-            <TextBlock Text="MindPace — Персональний планер та тайм-менеджер" Foreground="White" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
+        <Border Grid.Row="0" Background="#1E293B" Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="MindPace — Персональний планер та тайм-менеджер" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" x:Name="lblTodayDate" Foreground="#CBD5E1" FontSize="13" VerticalAlignment="Center"/>
+            </Grid>
         </Border>
 
-        <TabControl Grid.Row="1" Margin="10">
-            <TabItem Header="1. Проекти">
-                <Grid Margin="10">
+        <TabControl Grid.Row="1" Margin="12" Background="Transparent" BorderThickness="0">
+            <TabItem Header="1. Проекти та Дедлайни" FontSize="14" FontWeight="SemiBold" Padding="12,8">
+                <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="290"/>
+                        <ColumnDefinition Width="330"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,10,0">
+                    <Border Grid.Column="0" Style="{StaticResource CardPanel}" Margin="0,0,10,0">
                         <StackPanel>
-                            <TextBlock Text="Новий проект" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Новий проект" FontSize="16" FontWeight="Bold" Foreground="#111827" Margin="0,0,0,14"/>
 
-                            <TextBlock Text="Назва проекту:" Margin="0,0,0,4"/>
-                            <TextBox x:Name="txtTitle" Padding="5" Margin="0,0,0,10"/>
+                            <TextBlock Text="Назва проекту:" FontWeight="Medium" Foreground="#374151" Margin="0,0,0,4"/>
+                            <TextBox x:Name="txtTitle" Padding="8,6" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Опис:" Margin="0,0,0,4"/>
-                            <TextBox x:Name="txtDesc" Height="50" TextWrapping="Wrap" Padding="5" Margin="0,0,0,10"/>
+                            <TextBlock Text="Опис / завдання:" FontWeight="Medium" Foreground="#374151" Margin="0,0,0,4"/>
+                            <TextBox x:Name="txtDescription" Height="70" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Padding="8,6" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Оцінка годин:" Margin="0,0,0,4"/>
-                            <TextBox x:Name="txtHours" Text="10" Padding="5" Margin="0,0,0,10"/>
+                            <TextBlock Text="Оцінка часу (всього годин):" FontWeight="Medium" Foreground="#374151" Margin="0,0,0,4"/>
+                            <TextBox x:Name="txtTotalHours" Text="10" Padding="8,6" Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Дедлайн:" Margin="0,0,0,4"/>
-                            <DatePicker x:Name="dpDeadline" Margin="0,0,0,15"/>
+                            <TextBlock Text="Кінцевий термін (дедлайн):" FontWeight="Medium" Foreground="#374151" Margin="0,0,0,4"/>
+                            <DatePicker x:Name="dpDeadline" Margin="0,0,0,16" Padding="6,4"/>
 
-                            <Button Content="Додати проект" Height="34" Click="BtnAdd_Click" Background="#2563EB" Foreground="White" FontWeight="SemiBold"/>
+                            <Button Content="Додати проект" Style="{StaticResource PrimaryButton}" Click="BtnAddProject_Click" Height="36"/>
+
+                            <TextBlock x:Name="lblProjectError" Foreground="#DC2626" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="1" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl x:Name="icProjects">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="5" Background="#F8FAFC" Padding="10" Margin="0,0,0,8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="15"/>
-                                                    <TextBlock Text="{Binding Description}" Foreground="#64748B" FontSize="12" Margin="0,2,0,4"/>
-                                                    <TextBlock FontSize="12">
-                                                        <Run Text="Дедлайн: "/>
-                                                        <Run Text="{Binding Deadline, Mode=OneWay, StringFormat=dd.MM.yyyy}"/>
-                                                        <Run Text=" | План: "/>
-                                                        <Run Text="{Binding TotalEstimatedHours, Mode=OneWay}"/>
-                                                        <Run Text=" год | Факт: "/>
-                                                        <Run Text="{Binding HoursWorked, Mode=OneWay}"/>
-                                                        <Run Text=" год"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding DailyTimeFormatted, Mode=OneWay}" Foreground="#D97706" FontWeight="SemiBold" FontSize="13" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                                <Button Grid.Column="1" Content="Видалити" Tag="{Binding}" Click="BtnDelete_Click" Foreground="#DC2626" Width="75" Height="28" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                    <Border Grid.Column="1" Style="{StaticResource CardPanel}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Всі проекти" FontSize="16" FontWeight="Bold" Foreground="#111827"/>
+                                <TextBlock Grid.Column="1" x:Name="lblProjectCount" Foreground="#6B7280" FontSize="13"/>
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="icProjects">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <Grid Grid.Row="0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="15" Foreground="#111827"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding StatusSummary}" Foreground="#2563EB" FontWeight="SemiBold" FontSize="12"/>
+                                                    </Grid>
+
+                                                    <TextBlock Grid.Row="1" Text="{Binding Description}" Foreground="#4B5563" FontSize="13" TextWrapping="Wrap" Margin="0,4,0,8"/>
+
+                                                    <Grid Grid.Row="2" Margin="0,4,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                                                            <TextBlock FontSize="12" Foreground="#374151">
+                                                                <Run Text="Дедлайн: " FontWeight="Medium"/>
+                                                                <Run Text="{Binding Deadline, Mode=OneWay, StringFormat=dd.MM.yyyy}"/>
+                                                                <Run Text=" | Заплановано: " FontWeight="Medium"/>
+                                                                <Run Text="{Binding TotalEstimatedHours, Mode=OneWay}"/>
+                                                                <Run Text=" год | Відпрацьовано: " FontWeight="Medium"/>
+                                                                <Run Text="{Binding HoursWorked, Mode=OneWay}"/>
+                                                                <Run Text=" год"/>
+                                                            </TextBlock>
+                                                            <TextBlock FontSize="12" Foreground="#D97706" FontWeight="SemiBold" Margin="0,2,0,0">
+                                                                <Run Text="Потрібно: "/>
+                                                                <Run Text="{Binding DailyTimeFormatted, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Button Content="+30 хв" Tag="{Binding}" Click="BtnAddProgress_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0"/>
+                                                            <Button Content="{Binding CompletionButtonText}" Tag="{Binding}" Click="BtnToggleComplete_Click" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0"/>
+                                                            <Button Content="Видалити" Tag="{Binding}" Click="BtnDeleteProject_Click" Style="{StaticResource SecondaryButton}" Foreground="#DC2626"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="2. Розподіл часу">
-                <Grid Margin="15">
+            <TabItem Header="2. Розподіл по дням" FontSize="14" FontWeight="SemiBold" Padding="12,8">
+                <Grid Margin="0,12,0,0">
                     <StackPanel>
-                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
                             <TextBlock x:Name="lblTotalSchedule" Text="Щоб встигнути всі проекти, сьогодні треба працювати: 0 год" FontSize="15" FontWeight="Bold" Foreground="#1E40AF"/>
                         </Border>
-                        <TextBlock Text="Рекомендований темп за активними проектами:" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <ListBox x:Name="lstSchedule" Height="260" DisplayMemberPath="DisplayInfo"/>
+                        <ListBox x:Name="lstSchedule" Height="320" DisplayMemberPath="DisplayInfo"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="3. Фокус уваги">
-                <Grid Margin="15">
+            <TabItem Header="3. Фокус уваги" FontSize="14" FontWeight="SemiBold" Padding="12,8">
+                <Grid Margin="0,12,0,0">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock Text="Таймер фокусу (Pomodoro)" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                         <TextBlock x:Name="lblTimer" Text="25:00" FontSize="64" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center" Margin="0,0,0,15"/>
@@ -102,8 +181,8 @@
                         <ComboBox x:Name="cbFocusProjects" DisplayMemberPath="Title" Width="260" Margin="0,0,0,15"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button x:Name="btnTimerStart" Content="Старт" Width="100" Height="36" Click="BtnTimerStart_Click" Margin="0,0,10,0" Background="#16A34A" Foreground="White" FontWeight="Bold"/>
-                            <Button Content="Скинути" Width="100" Height="36" Click="BtnTimerReset_Click"/>
+                            <Button x:Name="btnTimerStart" Content="Старт" Width="100" Height="36" Click="BtnTimerStart_Click" Margin="0,0,10,0" Style="{StaticResource PrimaryButton}"/>
+                            <Button Content="Скинути" Width="100" Height="36" Click="BtnTimerReset_Click" Style="{StaticResource SecondaryButton}"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
