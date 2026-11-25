@@ -30,26 +30,18 @@ namespace MindPace
         {
             InitializeComponent();
 
-            // Встановлення поточної дати в шапці
             var ukCulture = CultureInfo.GetCultureInfo("uk-UA");
             var rawDate = DateTime.Today.ToString("dddd, d MMMM yyyy", ukCulture);
             lblTodayDate.Text = char.ToUpper(rawDate[0]) + rawDate[1..];
 
-            // Налаштування дати за замовчуванням (+7 днів)
             dpDeadline.SelectedDate = DateTime.Today.AddDays(7);
 
-            // Налаштування таймера концентрації
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
 
-            // Завантаження проектів
             LoadProjects();
-
-            // Оновлення розрахунків та списків
             RefreshAllViews();
         }
-
-        #region Завантаження та оновлення даних
 
         private void LoadProjects()
         {
@@ -63,14 +55,12 @@ namespace MindPace
 
         private void RefreshAllViews()
         {
-            // Оновлення списку проектів на вкладці 1
             icProjects.ItemsSource = null;
             icProjects.ItemsSource = _projects;
 
-            var activeProjects = _projects.Where(p => !p.IsCompleted && p.RemainingHours > 0).ToList();
+            var activeProjects = ScheduleCalculator.GetActiveProjects(_projects);
             lblProjectCount.Text = $"Всього: {_projects.Count} | Активних: {activeProjects.Count}";
 
-            // Оновлення вибору проекту для таймера (вкладка 3)
             var preservedId = (cbFocusProject.SelectedItem as Project)?.Id;
             var focusList = new List<Project>
             {
@@ -88,102 +78,43 @@ namespace MindPace
                 cbFocusProject.SelectedIndex = 0;
             }
 
-            // Оновлення вкладки 2 (Розподіл по днях)
             RefreshScheduleTab(activeProjects);
         }
 
         private void RefreshScheduleTab(List<Project>? activeProjects = null)
         {
-            activeProjects ??= _projects.Where(p => !p.IsCompleted && p.RemainingHours > 0).ToList();
+            activeProjects ??= ScheduleCalculator.GetActiveProjects(_projects);
 
-            // 1. Зведений час на сьогодні
-            double totalTodayHours = activeProjects.Sum(p => p.RequiredDailyHours);
+            double totalTodayHours = ScheduleCalculator.CalculateTotalDailyHours(activeProjects);
             lblTotalTodayHours.Text = Project.FormatHours(totalTodayHours);
 
-            // 2. Список щоденного навантаження за проектами
             icProjectDailyRates.ItemsSource = null;
             icProjectDailyRates.ItemsSource = activeProjects;
 
-            // 3. Календарний розклад на найближчі 7 днів
-            var ukCulture = CultureInfo.GetCultureInfo("uk-UA");
-            var daysSchedule = new List<DaySchedule>();
-
-            for (int i = 0; i < 7; i++)
-            {
-                var date = DateTime.Today.AddDays(i);
-                string dayTitle;
-                if (i == 0) dayTitle = $"Сьогодні ({date:dd.MM})";
-                else if (i == 1) dayTitle = $"Завтра ({date:dd.MM})";
-                else
-                {
-                    var dayName = date.ToString("dddd", ukCulture);
-                    dayTitle = $"{char.ToUpper(dayName[0]) + dayName[1..]} ({date:dd.MM})";
-                }
-
-                // Проекти, які актуальні для цього дня (дедлайн не раніше ніж ця дата)
-                var tasksForDay = activeProjects
-                    .Where(p => p.Deadline.Date >= date.Date)
-                    .Select(p => new DayTask
-                    {
-                        ProjectTitle = p.Title,
-                        DurationText = Project.FormatHours(p.RequiredDailyHours),
-                        DeadlineText = $"до {p.Deadline:dd.MM}"
-                    })
-                    .ToList();
-
-                double dayTotalHours = activeProjects
-                    .Where(p => p.Deadline.Date >= date.Date)
-                    .Sum(p => p.RequiredDailyHours);
-
-                string totalText = tasksForDay.Count > 0 
-                    ? $"Разом: {Project.FormatHours(dayTotalHours)}" 
-                    : "Немає завдань";
-
-                daysSchedule.Add(new DaySchedule
-                {
-                    Date = date,
-                    DayTitle = dayTitle,
-                    TotalTimeFormatted = totalText,
-                    Tasks = tasksForDay
-                });
-            }
-
+            var daysSchedule = ScheduleCalculator.GenerateWeekSchedule(activeProjects, DateTime.Today);
             icDaysSchedule.ItemsSource = null;
             icDaysSchedule.ItemsSource = daysSchedule;
         }
-
-        #endregion
-
-        #region Вкладка 1: Проекти
 
         private void BtnAddProject_Click(object sender, RoutedEventArgs e)
         {
             lblProjectError.Visibility = Visibility.Collapsed;
 
-            string title = txtTitle.Text.Trim();
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                ShowProjectError("Будь ласка, введіть назву проекту.");
-                return;
-            }
-
-            string hoursRaw = txtTotalHours.Text.Trim().Replace(',', '.');
-            if (!double.TryParse(hoursRaw, NumberStyles.Any, CultureInfo.InvariantCulture, out double totalHours) || totalHours <= 0)
-            {
-                ShowProjectError("Введіть коректну оцінку часу в годинах (більше 0).");
-                return;
-            }
-
             DateTime deadline = dpDeadline.SelectedDate ?? DateTime.Today.AddDays(7);
-            if (deadline.Date < DateTime.Today)
+            if (!ScheduleCalculator.TryValidateProjectInput(
+                txtTitle.Text,
+                txtTotalHours.Text,
+                deadline,
+                out double totalHours,
+                out string errorMessage))
             {
-                ShowProjectError("Дедлайн не може бути у минулому.");
+                ShowProjectError(errorMessage);
                 return;
             }
 
             var newProject = new Project
             {
-                Title = title,
+                Title = txtTitle.Text.Trim(),
                 Description = txtDescription.Text.Trim(),
                 TotalEstimatedHours = totalHours,
                 HoursWorked = 0,
@@ -194,7 +125,6 @@ namespace MindPace
             _projects.Add(newProject);
             ProjectStorage.Save(_projects);
 
-            // Очищення форми
             txtTitle.Text = string.Empty;
             txtDescription.Text = string.Empty;
             txtTotalHours.Text = "10";
@@ -249,18 +179,10 @@ namespace MindPace
             }
         }
 
-        #endregion
-
-        #region Вкладка 2: Розподіл по днях
-
         private void BtnRefreshSchedule_Click(object sender, RoutedEventArgs e)
         {
             RefreshAllViews();
         }
-
-        #endregion
-
-        #region Вкладка 3: Фокус уваги (Таймер Помодоро)
 
         private void Timer_Tick(object? sender, EventArgs e)
         {
@@ -271,7 +193,6 @@ namespace MindPace
             }
             else
             {
-                // Таймер дійшов до нуля
                 _timer.Stop();
                 _isRunning = false;
                 btnTimerStartPause.Content = "▶ Почати";
@@ -287,7 +208,6 @@ namespace MindPace
                     _completedSessions++;
                     _totalFocusedMinutes += _workMinutes;
 
-                    // Автозарахування часу до вибраного проекту
                     if (chkAutoLogProgress.IsChecked == true &&
                         cbFocusProject.SelectedItem is Project proj &&
                         proj.Id != Guid.Empty)
@@ -301,7 +221,6 @@ namespace MindPace
                         }
                     }
 
-                    // Перемикаємо на перерву
                     _isWorkSession = false;
                     _remainingSeconds = _breakMinutes * 60;
                     SetTimerModeUI(isWork: false);
@@ -315,7 +234,6 @@ namespace MindPace
                 }
                 else
                 {
-                    // Закінчилась перерва, перемикаємо на роботу
                     _isWorkSession = true;
                     _remainingSeconds = _workMinutes * 60;
                     SetTimerModeUI(isWork: true);
@@ -435,7 +353,5 @@ namespace MindPace
         {
             lblFocusStats.Text = $"Завершено сесій: {_completedSessions} | Час у фокусі: {_totalFocusedMinutes} хв";
         }
-
-        #endregion
     }
 }
