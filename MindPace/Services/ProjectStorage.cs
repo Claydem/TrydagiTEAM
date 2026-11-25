@@ -25,15 +25,19 @@ namespace MindPace.Services
             {
                 if (!File.Exists(FilePath))
                 {
+                    AppLogger.Info("Файл projects.json не знайдено, завантажено початковий приклад");
                     return GetInitialSamples();
                 }
 
                 string json = File.ReadAllText(FilePath);
                 var items = JsonSerializer.Deserialize<List<Project>>(json, JsonOptions);
-                return items ?? GetInitialSamples();
+                var result = items ?? GetInitialSamples();
+                AppLogger.Info($"Завантажено проектів із файлу: {result.Count}");
+                return result;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Error("Помилка при завантаженні projects.json", ex);
                 return GetInitialSamples();
             }
         }
@@ -44,10 +48,11 @@ namespace MindPace.Services
             {
                 string json = JsonSerializer.Serialize(projects, JsonOptions);
                 File.WriteAllText(FilePath, json);
+                AppLogger.Info("Список проектів збережено у projects.json");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Помилка збереження: {ex.Message}");
+                AppLogger.Error("Помилка збереження projects.json", ex);
             }
         }
 

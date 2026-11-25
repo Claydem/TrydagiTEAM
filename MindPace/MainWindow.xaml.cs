@@ -108,6 +108,7 @@ namespace MindPace
                 out double totalHours,
                 out string errorMessage))
             {
+                AppLogger.Warn($"Невдала валідація при створенні проекту: {errorMessage}");
                 ShowProjectError(errorMessage);
                 return;
             }
@@ -124,6 +125,7 @@ namespace MindPace
 
             _projects.Add(newProject);
             ProjectStorage.Save(_projects);
+            AppLogger.Info($"Створено проект '{newProject.Title}' ({newProject.TotalEstimatedHours} год, дедлайн {newProject.Deadline:dd.MM.yyyy})");
 
             txtTitle.Text = string.Empty;
             txtDescription.Text = string.Empty;
@@ -145,6 +147,7 @@ namespace MindPace
             {
                 project.HoursWorked = Math.Round(project.HoursWorked + 0.5, 2);
                 ProjectStorage.Save(_projects);
+                AppLogger.Info($"Додано +30 хв до проекту '{project.Title}' (всього відпрацьовано: {project.HoursWorked} год)");
                 RefreshAllViews();
             }
         }
@@ -155,6 +158,7 @@ namespace MindPace
             {
                 project.IsCompleted = !project.IsCompleted;
                 ProjectStorage.Save(_projects);
+                AppLogger.Info($"Змінено статус проекту '{project.Title}': IsCompleted={project.IsCompleted}");
                 RefreshAllViews();
             }
         }
@@ -174,6 +178,7 @@ namespace MindPace
                 {
                     _projects.Remove(project);
                     ProjectStorage.Save(_projects);
+                    AppLogger.Info($"Видалено проект '{project.Title}'");
                     RefreshAllViews();
                 }
             }
@@ -207,6 +212,7 @@ namespace MindPace
                 {
                     _completedSessions++;
                     _totalFocusedMinutes += _workMinutes;
+                    AppLogger.Info($"Завершено робочу сесію таймера ({_workMinutes} хв)");
 
                     if (chkAutoLogProgress.IsChecked == true &&
                         cbFocusProject.SelectedItem is Project proj &&
@@ -301,6 +307,7 @@ namespace MindPace
             {
                 _workMinutes = w;
                 _breakMinutes = b;
+                AppLogger.Info($"Оновлено налаштування таймера: робота {_workMinutes} хв, перерва {_breakMinutes} хв");
 
                 if (!_isRunning)
                 {
