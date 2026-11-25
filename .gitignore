@@ -1,6 +1,14 @@
 ## Build results
 [Bb]in/
 [Oo]bj/
+TestResults/
+
+## Logs and local secrets
+logs/
+*.log
+.env
+*.env
+appsettings.Development.json
 
 ## Visual Studio cache and settings
 .vs/
