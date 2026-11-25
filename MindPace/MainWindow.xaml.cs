@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -57,13 +58,68 @@ namespace MindPace
             cbFocusProjects.ItemsSource = activeProjects;
             if (activeProjects.Count > 0) cbFocusProjects.SelectedIndex = 0;
 
-            double totalTodayHours = activeProjects.Sum(p => p.RequiredDailyHours);
-            lblTotalSchedule.Text = $"Щоб встигнути всі проекти, сьогодні треба працювати: {Project.FormatHours(totalTodayHours)}";
+            RefreshScheduleTab(activeProjects);
+        }
 
-            lstSchedule.ItemsSource = activeProjects.Select(p => new
+        private void RefreshScheduleTab(List<Project>? activeProjects = null)
+        {
+            activeProjects ??= _projects.Where(p => !p.IsCompleted && p.RemainingHours > 0).ToList();
+
+            double totalTodayHours = activeProjects.Sum(p => p.RequiredDailyHours);
+            lblTotalTodayHours.Text = Project.FormatHours(totalTodayHours);
+
+            icProjectDailyRates.ItemsSource = null;
+            icProjectDailyRates.ItemsSource = activeProjects;
+
+            var ukCulture = CultureInfo.GetCultureInfo("uk-UA");
+            var daysSchedule = new List<DaySchedule>();
+
+            for (int i = 0; i < 7; i++)
             {
-                DisplayInfo = $"{p.Title} — Дедлайн: {p.Deadline:dd.MM.yyyy} | Темп: {p.DailyTimeFormatted}"
-            }).ToList();
+                var date = DateTime.Today.AddDays(i);
+                string dayTitle;
+                if (i == 0) dayTitle = $"Сьогодні ({date:dd.MM})";
+                else if (i == 1) dayTitle = $"Завтра ({date:dd.MM})";
+                else
+                {
+                    var dayName = date.ToString("dddd", ukCulture);
+                    dayTitle = $"{char.ToUpper(dayName[0]) + dayName[1..]} ({date:dd.MM})";
+                }
+
+                var tasksForDay = activeProjects
+                    .Where(p => p.Deadline.Date >= date.Date)
+                    .Select(p => new DayTask
+                    {
+                        ProjectTitle = p.Title,
+                        DurationText = Project.FormatHours(p.RequiredDailyHours),
+                        DeadlineText = $"до {p.Deadline:dd.MM}"
+                    })
+                    .ToList();
+
+                double dayTotalHours = activeProjects
+                    .Where(p => p.Deadline.Date >= date.Date)
+                    .Sum(p => p.RequiredDailyHours);
+
+                string totalText = tasksForDay.Count > 0
+                    ? $"Разом: {Project.FormatHours(dayTotalHours)}"
+                    : "Немає завдань";
+
+                daysSchedule.Add(new DaySchedule
+                {
+                    Date = date,
+                    DayTitle = dayTitle,
+                    TotalTimeFormatted = totalText,
+                    Tasks = tasksForDay
+                });
+            }
+
+            icDaysSchedule.ItemsSource = null;
+            icDaysSchedule.ItemsSource = daysSchedule;
+        }
+
+        private void BtnRefreshSchedule_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshAllViews();
         }
 
         private void BtnAddProject_Click(object sender, RoutedEventArgs e)
