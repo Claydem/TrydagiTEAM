@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: windows-latest
 
     steps:
@@ -27,3 +27,6 @@ jobs:
 
       - name: Build solution
         run: dotnet build MindPace.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test MindPace.sln --configuration Release --no-build --verbosity normal
