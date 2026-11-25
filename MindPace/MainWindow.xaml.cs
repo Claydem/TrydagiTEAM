@@ -45,11 +45,19 @@ namespace MindPace
 
         private void LoadProjects()
         {
-            _projects.Clear();
-            var loaded = ProjectStorage.Load();
-            foreach (var item in loaded)
+            try
             {
-                _projects.Add(item);
+                _projects.Clear();
+                var loaded = ProjectStorage.Load();
+                foreach (var item in loaded)
+                {
+                    _projects.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Помилка при завантаженні списку проектів у вікно", ex);
+                ShowSafeError("Не вдалося завантажити список проектів.");
             }
         }
 
@@ -98,41 +106,49 @@ namespace MindPace
 
         private void BtnAddProject_Click(object sender, RoutedEventArgs e)
         {
-            lblProjectError.Visibility = Visibility.Collapsed;
-
-            DateTime deadline = dpDeadline.SelectedDate ?? DateTime.Today.AddDays(7);
-            if (!ScheduleCalculator.TryValidateProjectInput(
-                txtTitle.Text,
-                txtTotalHours.Text,
-                deadline,
-                out double totalHours,
-                out string errorMessage))
+            try
             {
-                AppLogger.Warn($"Невдала валідація при створенні проекту: {errorMessage}");
-                ShowProjectError(errorMessage);
-                return;
+                lblProjectError.Visibility = Visibility.Collapsed;
+
+                DateTime deadline = dpDeadline.SelectedDate ?? DateTime.Today.AddDays(7);
+                if (!ScheduleCalculator.TryValidateProjectInput(
+                    txtTitle.Text,
+                    txtTotalHours.Text,
+                    deadline,
+                    out double totalHours,
+                    out string errorMessage))
+                {
+                    AppLogger.Warn($"Невдала валідація при створенні проекту: {errorMessage}");
+                    ShowProjectError(errorMessage);
+                    return;
+                }
+
+                var newProject = new Project
+                {
+                    Title = txtTitle.Text.Trim(),
+                    Description = txtDescription.Text.Trim(),
+                    TotalEstimatedHours = totalHours,
+                    HoursWorked = 0,
+                    Deadline = deadline,
+                    CreatedAt = DateTime.Now
+                };
+
+                _projects.Add(newProject);
+                ProjectStorage.Save(_projects);
+                AppLogger.Info($"Створено проект '{newProject.Title}' ({newProject.TotalEstimatedHours} год, дедлайн {newProject.Deadline:dd.MM.yyyy})");
+
+                txtTitle.Text = string.Empty;
+                txtDescription.Text = string.Empty;
+                txtTotalHours.Text = "10";
+                dpDeadline.SelectedDate = DateTime.Today.AddDays(7);
+
+                RefreshAllViews();
             }
-
-            var newProject = new Project
+            catch (Exception ex)
             {
-                Title = txtTitle.Text.Trim(),
-                Description = txtDescription.Text.Trim(),
-                TotalEstimatedHours = totalHours,
-                HoursWorked = 0,
-                Deadline = deadline,
-                CreatedAt = DateTime.Now
-            };
-
-            _projects.Add(newProject);
-            ProjectStorage.Save(_projects);
-            AppLogger.Info($"Створено проект '{newProject.Title}' ({newProject.TotalEstimatedHours} год, дедлайн {newProject.Deadline:dd.MM.yyyy})");
-
-            txtTitle.Text = string.Empty;
-            txtDescription.Text = string.Empty;
-            txtTotalHours.Text = "10";
-            dpDeadline.SelectedDate = DateTime.Today.AddDays(7);
-
-            RefreshAllViews();
+                AppLogger.Error("Помилка при створенні проекту", ex);
+                ShowSafeError("Не вдалося створити проект. Спробуйте ще раз.");
+            }
         }
 
         private void ShowProjectError(string message)
@@ -141,46 +157,80 @@ namespace MindPace
             lblProjectError.Visibility = Visibility.Visible;
         }
 
+        private void ShowSafeError(string message)
+        {
+            MessageBox.Show(
+                message,
+                "MindPace — Помилка",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning
+            );
+        }
+
         private void BtnAddProgress_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button btn && btn.Tag is Project project)
+            try
             {
-                project.HoursWorked = Math.Round(project.HoursWorked + 0.5, 2);
-                ProjectStorage.Save(_projects);
-                AppLogger.Info($"Додано +30 хв до проекту '{project.Title}' (всього відпрацьовано: {project.HoursWorked} год)");
-                RefreshAllViews();
+                if (sender is Button btn && btn.Tag is Project project)
+                {
+                    project.HoursWorked = Math.Round(project.HoursWorked + 0.5, 2);
+                    ProjectStorage.Save(_projects);
+                    AppLogger.Info($"Додано +30 хв до проекту '{project.Title}' (всього відпрацьовано: {project.HoursWorked} год)");
+                    RefreshAllViews();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Помилка при оновленні прогресу проекту", ex);
+                ShowSafeError("Не вдалося оновити прогрес проекту.");
             }
         }
 
         private void BtnToggleComplete_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button btn && btn.Tag is Project project)
+            try
             {
-                project.IsCompleted = !project.IsCompleted;
-                ProjectStorage.Save(_projects);
-                AppLogger.Info($"Змінено статус проекту '{project.Title}': IsCompleted={project.IsCompleted}");
-                RefreshAllViews();
+                if (sender is Button btn && btn.Tag is Project project)
+                {
+                    project.IsCompleted = !project.IsCompleted;
+                    ProjectStorage.Save(_projects);
+                    AppLogger.Info($"Змінено статус проекту '{project.Title}': IsCompleted={project.IsCompleted}");
+                    RefreshAllViews();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Помилка при зміні статусу проекту", ex);
+                ShowSafeError("Не вдалося змінити статус проекту.");
             }
         }
 
         private void BtnDeleteProject_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button btn && btn.Tag is Project project)
+            try
             {
-                var result = MessageBox.Show(
-                    $"Ви дійсно бажаєте видалити проект «{project.Title}»?",
-                    "Підтвердження видалення",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question
-                );
-
-                if (result == MessageBoxResult.Yes)
+                if (sender is Button btn && btn.Tag is Project project)
                 {
-                    _projects.Remove(project);
-                    ProjectStorage.Save(_projects);
-                    AppLogger.Info($"Видалено проект '{project.Title}'");
-                    RefreshAllViews();
+                    var result = MessageBox.Show(
+                        $"Ви дійсно бажаєте видалити проект «{project.Title}»?",
+                        "Підтвердження видалення",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question
+                    );
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        _projects.Remove(project);
+                        ProjectStorage.Save(_projects);
+                        AppLogger.Info($"Видалено проект '{project.Title}'");
+                        RefreshAllViews();
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Помилка при видаленні проекту", ex);
+                ShowSafeError("Не вдалося видалити проект.");
             }
         }
 
@@ -191,69 +241,82 @@ namespace MindPace
 
         private void Timer_Tick(object? sender, EventArgs e)
         {
-            if (_remainingSeconds > 0)
+            try
             {
-                _remainingSeconds--;
-                UpdateTimerDisplay();
-            }
-            else
-            {
-                _timer.Stop();
-                _isRunning = false;
-                btnTimerStartPause.Content = "▶ Почати";
-
-                try
+                if (_remainingSeconds > 0)
                 {
-                    SystemSounds.Exclamation.Play();
-                }
-                catch { }
-
-                if (_isWorkSession)
-                {
-                    _completedSessions++;
-                    _totalFocusedMinutes += _workMinutes;
-                    AppLogger.Info($"Завершено робочу сесію таймера ({_workMinutes} хв)");
-
-                    if (chkAutoLogProgress.IsChecked == true &&
-                        cbFocusProject.SelectedItem is Project proj &&
-                        proj.Id != Guid.Empty)
-                    {
-                        var target = _projects.FirstOrDefault(p => p.Id == proj.Id);
-                        if (target != null)
-                        {
-                            target.HoursWorked = Math.Round(target.HoursWorked + (_workMinutes / 60.0), 2);
-                            ProjectStorage.Save(_projects);
-                            RefreshAllViews();
-                        }
-                    }
-
-                    _isWorkSession = false;
-                    _remainingSeconds = _breakMinutes * 60;
-                    SetTimerModeUI(isWork: false);
-
-                    MessageBox.Show(
-                        "Сесію фокусу завершено! Відпочиньте ☕",
-                        "MindPace — Фокус уваги",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information
-                    );
+                    _remainingSeconds--;
+                    UpdateTimerDisplay();
                 }
                 else
                 {
-                    _isWorkSession = true;
-                    _remainingSeconds = _workMinutes * 60;
-                    SetTimerModeUI(isWork: true);
+                    _timer.Stop();
+                    _isRunning = false;
+                    btnTimerStartPause.Content = "▶ Почати";
 
-                    MessageBox.Show(
-                        "Перерву завершено! Готові до наступного блоку роботи? 🔥",
-                        "MindPace — Фокус уваги",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information
-                    );
+                    try
+                    {
+                        SystemSounds.Exclamation.Play();
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn($"Не вдалося відтворити звуковий сигнал: {ex.Message}");
+                    }
+
+                    if (_isWorkSession)
+                    {
+                        _completedSessions++;
+                        _totalFocusedMinutes += _workMinutes;
+                        AppLogger.Info($"Завершено робочу сесію таймера ({_workMinutes} хв)");
+
+                        if (chkAutoLogProgress.IsChecked == true &&
+                            cbFocusProject.SelectedItem is Project proj &&
+                            proj.Id != Guid.Empty)
+                        {
+                            var target = _projects.FirstOrDefault(p => p.Id == proj.Id);
+                            if (target != null)
+                            {
+                                target.HoursWorked = Math.Round(target.HoursWorked + (_workMinutes / 60.0), 2);
+                                ProjectStorage.Save(_projects);
+                                RefreshAllViews();
+                            }
+                        }
+
+                        _isWorkSession = false;
+                        _remainingSeconds = _breakMinutes * 60;
+                        SetTimerModeUI(isWork: false);
+
+                        MessageBox.Show(
+                            "Сесію фокусу завершено! Відпочиньте ☕",
+                            "MindPace — Фокус уваги",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information
+                        );
+                    }
+                    else
+                    {
+                        _isWorkSession = true;
+                        _remainingSeconds = _workMinutes * 60;
+                        SetTimerModeUI(isWork: true);
+
+                        MessageBox.Show(
+                            "Перерву завершено! Готові до наступного блоку роботи? 🔥",
+                            "MindPace — Фокус уваги",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information
+                        );
+                    }
+
+                    UpdateTimerDisplay();
+                    UpdateStatsDisplay();
                 }
-
-                UpdateTimerDisplay();
-                UpdateStatsDisplay();
+            }
+            catch (Exception ex)
+            {
+                _timer.Stop();
+                _isRunning = false;
+                AppLogger.Error("Помилка під час роботи таймера", ex);
+                ShowSafeError("Виникла помилка в роботі таймера. Таймер зупинено.");
             }
         }
 
@@ -302,34 +365,43 @@ namespace MindPace
 
         private void BtnApplyTimerSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (int.TryParse(txtWorkMin.Text.Trim(), out int w) && w > 0 &&
-                int.TryParse(txtBreakMin.Text.Trim(), out int b) && b > 0)
+            try
             {
-                _workMinutes = w;
-                _breakMinutes = b;
-                AppLogger.Info($"Оновлено налаштування таймера: робота {_workMinutes} хв, перерва {_breakMinutes} хв");
-
-                if (!_isRunning)
+                if (int.TryParse(txtWorkMin.Text.Trim(), out int w) && w > 0 &&
+                    int.TryParse(txtBreakMin.Text.Trim(), out int b) && b > 0)
                 {
-                    _remainingSeconds = (_isWorkSession ? _workMinutes : _breakMinutes) * 60;
-                    UpdateTimerDisplay();
-                }
+                    _workMinutes = w;
+                    _breakMinutes = b;
+                    AppLogger.Info($"Оновлено налаштування таймера: робота {_workMinutes} хв, перерва {_breakMinutes} хв");
 
-                MessageBox.Show(
-                    $"Налаштування збережено:\nРобота: {_workMinutes} хв\nПерерва: {_breakMinutes} хв",
-                    "Налаштування таймера",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information
-                );
+                    if (!_isRunning)
+                    {
+                        _remainingSeconds = (_isWorkSession ? _workMinutes : _breakMinutes) * 60;
+                        UpdateTimerDisplay();
+                    }
+
+                    MessageBox.Show(
+                        $"Налаштування збережено:\nРобота: {_workMinutes} хв\nПерерва: {_breakMinutes} хв",
+                        "Налаштування таймера",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information
+                    );
+                }
+                else
+                {
+                    AppLogger.Warn("Спроба ввести некоректні налаштування таймера");
+                    MessageBox.Show(
+                        "Будь ласка, введіть коректні додатні числа хвилин.",
+                        "Помилка",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show(
-                    "Будь ласка, введіть коректні додатні числа хвилин.",
-                    "Помилка",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
+                AppLogger.Error("Помилка при збереженні налаштувань таймера", ex);
+                ShowSafeError("Не вдалося застосувати налаштування таймера.");
             }
         }
 
